@@ -1,3 +1,5 @@
+using AutoMapper;
+using CouponAPI;
 using CouponAPI.Data;
 using CouponAPI.Models;
 using CouponAPI.Models.DTO;
@@ -10,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAutoMapper(typeof(MappingConfig));
 
 var app = builder.Build();
 
@@ -43,7 +46,7 @@ app.MapGet("api/coupon/{id:int}", (int id) => {
  * sucessful inputs will create a coupon object and append it to the 
  * list of coupons */
 
-app.MapPost("api/coupon", ([FromBody] CouponCreateDTO coupon_C_DTO) => {
+app.MapPost("api/coupon", (IMapper _mapper, [FromBody] CouponCreateDTO coupon_C_DTO) => {
 	/* checks if the name on the object being passed in null and if the coupon already exits */
 	if (string.IsNullOrEmpty(coupon_C_DTO.Name))
 	{
@@ -55,24 +58,14 @@ app.MapPost("api/coupon", ([FromBody] CouponCreateDTO coupon_C_DTO) => {
 	}
 
 	/* creates a new coupon object with the given DTO information */
-	Coupon coupon = new()
-	{
-		IsActive = coupon_C_DTO.IsActive,
-		Name = coupon_C_DTO.Name,
-		Percent = coupon_C_DTO.Percent
-	};
+	Coupon coupon = _mapper.Map<Coupon>(coupon_C_DTO);
 
 	/* sets the current coupons id to one greater than the ID of the previous coupon */
 	coupon.Id = CouponStore.Coupons.OrderByDescending(c => c.Id).FirstOrDefault().Id + 1;
 	CouponStore.Coupons.Add(coupon);
-	Coupon couponDTO = new()
-	{
-		Id = coupon.Id,
-		IsActive = coupon.IsActive,
-		Name = coupon.Name,
-		Percent = coupon.Percent,
-		Created = coupon.Created
-	};
+
+	/* creates a new coupon DTO from the coupon object and incremented ID */
+	CouponDTO couponDTO = _mapper.Map<CouponDTO>(coupon);
 	return Results.Ok(couponDTO);
 }).WithName("CreateCoupon").Accepts<CouponCreateDTO>("application/json").Produces<CouponDTO>(201).Produces(400);
 
@@ -86,7 +79,7 @@ app.MapPut("api/coupon", () => {
 
 });
 
-/*
+/* 
  * 
  * 
  * 
